@@ -10,10 +10,10 @@ export const generateTokenAndSetCookie = (res, userId) => {
      )
 
      res.cookie("token", token, {
-        httpOnly: true, // xss 
+        httpOnly: true, // xss attack
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAfe: 7*24*60*1000,
+        sameSite: "strict", // csrf
+        maxAfe: 7 * 24 * 60 * 60 * 1000,
      });
      return token;
 }

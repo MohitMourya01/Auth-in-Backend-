@@ -7,6 +7,7 @@ import { generateVerificationToken } from '../utils/generateVerificationToken.js
 
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {generateTokenAndSetCookie} from "../utils/generateTokenAndSetCookie.js"
+import { sendVerificationEmail } from '../../mailtrap/emails.js';
 const signup = asyncHandler(async (req, res) => {
    // console.log("controller")
    const {email, password, name} = req.body;
@@ -39,16 +40,45 @@ const signup = asyncHandler(async (req, res) => {
     // jwt
     generateTokenAndSetCookie(res, user._id);
 
-    return res.status(201).json({
-        success: true,
-        message: "User created successfully",
-        user: {
-            ...user._doc,
+    sendVerificationEmail(user.email, verificationToken)
+
+    return res.status(201).json(new ApiResponse(
+        200, 
+        {...user._doc,
             password: undefined
-        }
-    })
+        },
+         "User created successfully")
+        )
+    // ){
+    //     success: true,
+    //     message: "User created successfully",
+    //     user: {
+    //         ...user._doc,
+    //         password: undefined
+    //     }
+    // })
    
     //res.send("Signup route")
+})
+
+const verifyEmail = asyncHandler( async (req, res) => {
+    const {code} = req.body;
+    const user = await User.findOne({
+        verificationToken: code,
+        verificationTokenExpiresAt: {$gt: Date.now()}
+    })
+
+    if(!user) {
+        throw new ApiError(404, "Invalid or expired verification code")
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+    await user.save();
+
+    await sendWelcomeEmail(user.email, user.name)
+
 })
 
 const loginUser = (req, res) => {
